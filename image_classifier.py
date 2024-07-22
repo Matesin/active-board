@@ -1,7 +1,6 @@
 # Import required modules
 import cv2 as cv
-import time
-import argparse
+import logging as log
 
 # CV heuristics
 CONF_THRESHOLD = 0.7
@@ -22,18 +21,19 @@ def classify_image(gender_net, age_net, frame_in):
 
     if len(faces) == 0:
         return None, frame
-
+    log.info(f"Faces detected: {len(faces)}")
     for (x, y, w, h) in faces:
+        # log.info(f"Face {faces.index((x, y, w, h))} x: {x}, y: {y}, w: {w}, h: {h}")
         cv.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
         face = frame[y:y + h, x:x + w].copy()
-        print(face)
+        log.info(face)
         blob = cv.dnn.blobFromImage(face, 1.0, (244, 244), MODEL_MEAN_VALUES, swapRB=True)
-        print(blob)
+        # log.info(blob)
 
         # Predict gender
         gender_net.setInput(blob)
         gender_preds = gender_net.forward()
-        print(f"Gender preds size: {gender_preds.size}")
+        log.info(f"Gender preds size: {gender_preds.size}")
         # Assess gender
         if gender_preds.size > 0 and gender_preds[0].argmax() < len(GENDER_LIST):
             gender = GENDER_LIST[gender_preds[0].argmax()]
@@ -41,21 +41,21 @@ def classify_image(gender_net, age_net, frame_in):
             gender = "Unknown"
 
 
-        print("Gender Output : {}".format(gender_preds))
-        print("Gender : {}, conf = {:.3f}".format(gender, gender_preds[0].max()))
+        log.info("Gender Output : {}".format(gender_preds))
+        log.info("Gender : {}, conf = {:.3f}".format(gender, gender_preds[0].max()))
 
         # Predict age
         age_net.setInput(blob)
         age_preds = age_net.forward()
         age = AGE_LIST[age_preds[0].argmax()]
 
-        print(f"Assumed gender: {gender_preds}\n Assumed age: {age_preds}")
+        log.info(f"Assumed gender: {gender_preds}\n Assumed age: {age_preds}")
 
         label = "{},{}".format(gender, age)
         text_size = cv.getTextSize(label, cv.FONT_HERSHEY_TRIPLEX, 0.5, 1)[0]
         text_x = x + (w - text_size[0]) / 2
         cv.putText(frame, label, (int(text_x), y - 10), cv.FONT_HERSHEY_TRIPLEX, 0.5, (0, 255, 0), 1, cv.LINE_AA)
-        return faces, frame
+    return faces, frame
 
 
 def load_caffe_models(args) -> tuple:
@@ -82,7 +82,7 @@ def load_caffe_models(args) -> tuple:
 
         # face_net.setPreferableBackend(cv.dnn.DNN_TARGET_CPU)
 
-        print("Using CPU device")
+        log.info("Using CPU device")
     elif args.device == "gpu":
         age_net.setPreferableBackend(cv.dnn.DNN_BACKEND_CUDA)
         age_net.setPreferableTarget(cv.dnn.DNN_TARGET_CUDA)
@@ -92,17 +92,17 @@ def load_caffe_models(args) -> tuple:
 
         # face_net.setPreferableBackend(cv.dnn.DNN_BACKEND_CUDA)
         # face_net.setPreferableTarget(cv.dnn.DNN_TARGET_CUDA)
-        print("Using GPU device")
+        log.info("Using GPU device")
 
     # If device is not valid, default to CPU
     elif args.device != "cpu" and args.device != "gpu":
-        print("Invalid device selected, defaulting to CPU")
+        log.info("Invalid device selected, defaulting to CPU")
         
         age_net.setPreferableBackend(cv.dnn.DNN_TARGET_CPU)
         gender_net.setPreferableBackend(cv.dnn.DNN_TARGET_CPU)
         # face_net.setPreferableBackend(cv.dnn.DNN_TARGET_CPU)
 
-        print("Using CPU device")
+        log.info("Using CPU device")
 
     return age_net, gender_net
 

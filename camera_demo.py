@@ -3,9 +3,12 @@ import time
 import subprocess
 import image_classifier as ic
 import argparse
+import logging as log
+
+
 
 # define fps
-FPS = 20
+FPS = 10
 
 
 # capture video from camera
@@ -21,14 +24,14 @@ def capture_video(camera_id: int) -> None:
         else:
             ret, frame = picked_camera.read()
             if not ret:
-                print("Camera not available.")
+                log.error("Camera not available.")
                 break
             t1 = t2
             # Display the resulting frame
         cv2.imshow(f"Camera {camera_id}", frame)
     picked_camera.release()
     cv2.destroyAllWindows()
-    print("Camera released and windows destroyed.")
+    log.info("Camera released and windows destroyed.")
 
 
 def capture_video_classify(camera_id: int, age_net, gender_net) -> None:
@@ -43,7 +46,7 @@ def capture_video_classify(camera_id: int, age_net, gender_net) -> None:
         else:
             ret, frame = picked_camera.read()
             if not ret:
-                print("Camera not available.")
+                log.error("Camera not available.")
                 break
             t1 = t2
             # Display the resulting frame
@@ -51,7 +54,7 @@ def capture_video_classify(camera_id: int, age_net, gender_net) -> None:
         cv2.imshow(f"Camera {camera_id}", frame_out)
     picked_camera.release()
     cv2.destroyAllWindows()
-    print("Camera released and windows destroyed.")
+    log.info("Camera released and windows destroyed.")
 
 
 def get_camera_dict() -> dict:
@@ -64,17 +67,17 @@ def get_camera_dict() -> dict:
             if not cap.read()[0]:
                 break
             else:
-                command = 'system_profiler SPCameraDataType | awk \'/Model ID/{print substr($0, index($0,$3))}\''
+                command = 'system_profiler SPCameraDataType | awk \'/Model ID/{log substr($0, index($0,$6))}\''
                 camera_name = subprocess.run(command, shell=True, capture_output=True, text=True).stdout.strip()
                 camera_names = camera_name.split('\n')
                 if index < len(camera_names):
-                    cameras[index] = camera_names[index]
-                    # print(f"Camera {index}: {cameras[index]}")
+                    cameras[index] = camera_names[0]
+                    # log(f"Camera {index}: {cameras[index]}")
                 else:
                     break
             cap.release()
         except Exception as e:
-            print(f"Error: {e}") # Jebat tuhle exception, zkousim mutnout OpenCV errors, zkus najit jiny reseni pls
+            log.error(e) # Jebat tuhle exception, zkousim mutnout OpenCV errors, zkus najit jiny reseni pls
             break
         index += 1
     return cameras
@@ -94,11 +97,11 @@ if __name__ == "__main__":
 
     cameras = get_camera_dict()
     if len(cameras) == 0:
-        print("There are no cameras available, ending program")
+        log.error("There are no cameras available, ending program")
         exit(-1)
     print(f"The following cameras are available:")
     for index, camera_name in cameras.items():
-        print(f"Camera {index + 1}: {camera_name}")
+        print(f"Camera {index}: {camera_name}")
     camera_index = input("Input the camera index: ")
     while not camera_index.isdigit() or int(camera_index) not in cameras.keys():
         camera_index = input("Input a valid camera index: ")
@@ -106,4 +109,4 @@ if __name__ == "__main__":
     age_net, gender_net = ic.load_caffe_models(args)
     # capture_video(int(camera_index))
     capture_video_classify(int(camera_index), age_net, gender_net)
-    print("Ending program, jebuto.")
+    log.info("Ending program, jebuto.")
