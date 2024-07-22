@@ -47,9 +47,8 @@ def capture_video_classify(camera_id: int, age_net, gender_net) -> None:
                 break
             t1 = t2
             # Display the resulting frame
-        cv2.imshow(f"Camera {camera_id}", frame)
-        classification_result = ic.classify_image(age_net, gender_net, frame)  # Classify the frame
-        cv2.imshow(f"Camera {camera_id}", classification_result)
+        faces, frame_out = ic.classify_image(age_net, gender_net, frame)  # Classify the frame
+        cv2.imshow(f"Camera {camera_id}", frame_out)
     picked_camera.release()
     cv2.destroyAllWindows()
     print("Camera released and windows destroyed.")
@@ -105,6 +104,6 @@ if __name__ == "__main__":
         camera_index = input("Input a valid camera index: ")
     print(f"Opening camera {camera_index}...")
     age_net, gender_net = ic.load_caffe_models(args)
-    capture_video(int(camera_index))
-    # capture_video_classify(int(camera_index), age_net, gender_net)
+    # capture_video(int(camera_index))
+    capture_video_classify(int(camera_index), age_net, gender_net)
     print("Ending program, jebuto.")

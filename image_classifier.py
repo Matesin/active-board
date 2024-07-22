@@ -14,12 +14,15 @@ global CAMERA_FPS
 
 
 # Load the face box
-def classify_image(gender_net, age_net, frame):
-    frame = cv.flip(frame, 1)
-    face_classifier = cv.CascadeClassifier('opencv/data/haarcascades/haarcascade_frontalface_default.xml')
+def classify_image(gender_net, age_net, frame_in):
+
+    frame = cv.flip(frame_in, 1)
+    face_classifier = cv.CascadeClassifier('opencv/data/haarcascades/haarcascade_frontalface_default.xml') # Load the face classifier, SPECIFY PATH
     faces = face_classifier.detectMultiScale(frame, 1.3, 5, minSize=(30, 30))
+
     if len(faces) == 0:
-        return frame, []
+        return None, frame
+
     for (x, y, w, h) in faces:
         cv.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
         face = frame[y:y + h, x:x + w].copy()
@@ -30,7 +33,11 @@ def classify_image(gender_net, age_net, frame):
         # Predict gender
         gender_net.setInput(blob)
         gender_preds = gender_net.forward()
-        gender = GENDER_LIST[gender_preds[0].argmax()]
+        # Assess gender
+        if gender_preds.size > 0 and gender_preds[0].argmax() < len(GENDER_LIST):
+            gender = GENDER_LIST[gender_preds[0].argmax()]
+        else:
+            gender = "Unknown"
 
         print("Gender Output : {}".format(gender_preds))
         print("Gender : {}, conf = {:.3f}".format(gender, gender_preds[0].max()))
@@ -46,7 +53,7 @@ def classify_image(gender_net, age_net, frame):
         text_size = cv.getTextSize(label, cv.FONT_HERSHEY_TRIPLEX, 0.5, 1)[0]
         text_x = x + (w - text_size[0]) / 2
         cv.putText(frame, label, (int(text_x), y - 10), cv.FONT_HERSHEY_TRIPLEX, 0.5, (0, 255, 0), 1, cv.LINE_AA)
-        return faces
+        return faces, frame
 
 
 def load_caffe_models(args) -> tuple:
@@ -96,50 +103,6 @@ def load_caffe_models(args) -> tuple:
         print("Using CPU device")
 
     return age_net, gender_net
-
-
-def video_detector(age_net, gender_net) -> None:
-    # Open a video file or an image file or a camera stream
-    cap = cv.VideoCapture(args.input if args.input else 0)
-    padding = 20
-    t1 = time.time()
-    while cv.waitKey(1) < 0:
-        # Read frame
-        t2 = time.time()
-        # Limit FPS
-        if t2 - t1 < 1 / args.fps:
-            continue
-        has_frame, frame = cap.read()
-        if not has_frame:
-            print("No video feed available, exiting...")
-            cv.waitKey(5000)
-            break
-
-        # Get the face box
-        classify_image(gender_net, age_net, frame)
-        # Display the resulting frame
-        cv.imshow('frame', frame)
-        t1 = time.time()
-        print("time : {:.3f}".format(time.time() - t1))
-
-
-def main(args) -> None:
-    video_detector(*load_caffe_models(args))
-
-if __name__ == "__main__":
-    # Parse bash arguments
-    parser = argparse.ArgumentParser(description='Use this script to run age and gender recognition using OpenCV.')
-
-    parser.add_argument('--input',
-                        help='Path to input image or video file. Skip this argument to capture frames from a camera.')
-
-    parser.add_argument("--device", default="cpu", help="Device to inference on")
-
-    parser.add_argument('--fps', type=int, default=10, help='Frames per second that the camera will capture')
-
-    args = parser.parse_args()
-    main(args)
-
 
 # cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_IN
 # TALL_PREFIX=~/opencv_gpu -DINSTALL_PYTHON_EXAMPLES=OFF -DINSTALL_C_EXAMPLES=OFF -DOPENCV_ENABLE_NONFREE=ON -DOPENCV_EXTRA_MODULES_PATH=~/cv2_gpu/opencv_contrib/modules -DPYTHON_EXECUTABLE=~/env/bin/python3 -DBUILD_EXAMPLES=ON -DWITH_CUDA=ON -DWITH_CUDNN=ON -DOPENCV_DNN_CUDA=ON  -DENABLE_FAST_MATH=ON -DCUDA_FAST_MATH=ON  -DWITH_CUBLAS=ON -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.2 -DOpenCL_LIBRARY=/usr/local/cuda-10.2/lib64/libOpenCL.so -DOpenCL_INCLUDE_DIR=/usr/local/cuda-10.2/include/ ..
