@@ -8,13 +8,16 @@ MODEL_MEAN_VALUES = (78.4263377603, 87.7689143744, 114.895847746)
 AGE_LIST = ['(0-2)', '(4-6)', '(8-12)', '(15-20)', '(25-32)', '(38-43)', '(48-53)', '(60-100)']
 GENDER_LIST = ['Male', 'Female']
 
-# Camera settings
-global CAMERA_FPS
 
-
-# Load the face box
+# ----------------------FUNCTION----------------------
 def classify_image(gender_net, age_net, frame_in):
-
+    """
+    Classifies faces in a given frame
+    :param gender_net:
+    :param age_net:
+    :param frame_in:
+    :return: List of faces and their parameters, frame with faces outlined and details annotated
+    """
     frame = cv.flip(frame_in, 1)
     face_classifier = cv.CascadeClassifier('opencv/data/haarcascades/haarcascade_frontalface_default.xml') # Load the face classifier, SPECIFY PATH
     faces = face_classifier.detectMultiScale(frame, 1.3, 5, minSize=(30, 30))
@@ -58,7 +61,13 @@ def classify_image(gender_net, age_net, frame_in):
     return faces, frame
 
 
+# ----------------------FUNCTION----------------------
 def load_caffe_models(args) -> tuple:
+    """
+    Loads models for age and genders
+    :param args: bash args
+    :return: calibrated networks for age and gender assessment
+    """
 
     # face_proto = "opencv/samples/dnn/face_detector/opencv_face_detector.pbtxt"
     # face_model = "opencv_face_detector_uint8.pb"
