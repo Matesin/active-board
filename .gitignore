@@ -13,8 +13,12 @@ make_opencv/
 *.jpeg
 *.gif
 
+### Json files ###
+*.json
+
 ### .DS_Store ###
 .DS_Store
 
 ### .idea ###
 .idea/
+
