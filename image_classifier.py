@@ -33,11 +33,13 @@ def classify_image(gender_net, age_net, frame_in):
         # Predict gender
         gender_net.setInput(blob)
         gender_preds = gender_net.forward()
+        print(f"Gender preds size: {gender_preds.size}")
         # Assess gender
         if gender_preds.size > 0 and gender_preds[0].argmax() < len(GENDER_LIST):
             gender = GENDER_LIST[gender_preds[0].argmax()]
         else:
             gender = "Unknown"
+
 
         print("Gender Output : {}".format(gender_preds))
         print("Gender : {}, conf = {:.3f}".format(gender, gender_preds[0].max()))

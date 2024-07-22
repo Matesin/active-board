@@ -47,7 +47,7 @@ def capture_video_classify(camera_id: int, age_net, gender_net) -> None:
                 break
             t1 = t2
             # Display the resulting frame
-        faces, frame_out = ic.classify_image(age_net, gender_net, frame)  # Classify the frame
+        faces, frame_out = ic.classify_image(gender_net, age_net, frame)  # Classify the frame
         cv2.imshow(f"Camera {camera_id}", frame_out)
     picked_camera.release()
     cv2.destroyAllWindows()
