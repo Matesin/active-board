@@ -1,9 +1,20 @@
 # Git ignored files
+
 ### venv (virtual environment) ###
 venv/
+
 ### build ###
 opencv/
 make_opencv/
+
 ### Don't you push images to git ! ###
 *.jpg
+*.png
+*.jpeg
+*.gif
 
+### .DS_Store ###
+.DS_Store
+
+### .idea ###
+.idea/

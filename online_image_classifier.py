@@ -12,7 +12,7 @@ from datetime import datetime
 def capture_image():
     # Create the in-memory stream
     stream = BytesIO()
-    camera = cv2.VideoCapture(0)
+    camera = cv.VideoCapture(0)
     frame = camera.read()
     # "Rewind" the stream to the beginning so we can read its content
     stream.seek(0)
@@ -51,7 +51,7 @@ if __name__ == "__main__":
         gender = face['gender']['gender_label']
         age_min = face['age']['min']
         age_max = face['age']['max']
-        cv.putText(img,'gender: {} age: {}-{}'.format(pohlavi, vek_minimalni, vek_maximalni),
+        cv.putText(img,'gender: {} age: {}-{}'.format(gender, age_min, age_max),
             bottomLeftCornerOfText,
             font,
             fontScale,

@@ -12,38 +12,55 @@ GENDER_LIST = ['Male', 'Female']
 # Camera settings
 global CAMERA_FPS
 
-def get_face_box(net, frame):
-    frameOpencvDnn = frame.copy()
-    frameHeight = frameOpencvDnn.shape[0]
-    frameWidth = frameOpencvDnn.shape[1]
-    blob = cv.dnn.blobFromImage(frameOpencvDnn, 1.0, (300, 300), [104, 117, 123], True, False)
 
-    net.setInput(blob)
-    detections = net.forward()
-    faceBoxes = []
-    for i in range(detections.shape[2]):
-        confidence = detections[0, 0, i, 2]
-        if confidence > CONF_THRESHOLD:
-            x1 = int(detections[0, 0, i, 3] * frameWidth)
-            y1 = int(detections[0, 0, i, 4] * frameHeight)
-            x2 = int(detections[0, 0, i, 5] * frameWidth)
-            y2 = int(detections[0, 0, i, 6] * frameHeight)
-            faceBoxes.append([x1, y1, x2, y2])
-            cv.rectangle(frameOpencvDnn, (x1, y1), (x2, y2), (0, 255, 0), int(round(frameHeight / 150)), 8)
-    return frameOpencvDnn, faceBoxes
+# Load the face box
+def classify_image(gender_net, age_net, frame):
+    frame = cv.flip(frame, 1)
+    face_classifier = cv.CascadeClassifier('opencv/data/haarcascades/haarcascade_frontalface_default.xml')
+    faces = face_classifier.detectMultiScale(frame, 1.3, 5, minSize=(30, 30))
+    if len(faces) == 0:
+        return frame, []
+    for (x, y, w, h) in faces:
+        cv.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        face = frame[y:y + h, x:x + w].copy()
+        print(face)
+        blob = cv.dnn.blobFromImage(face, 1.0, (244, 244), MODEL_MEAN_VALUES, swapRB=True)
+        print(blob)
+
+        # Predict gender
+        gender_net.setInput(blob)
+        gender_preds = gender_net.forward()
+        gender = GENDER_LIST[gender_preds[0].argmax()]
+
+        print("Gender Output : {}".format(gender_preds))
+        print("Gender : {}, conf = {:.3f}".format(gender, gender_preds[0].max()))
+
+        # Predict age
+        age_net.setInput(blob)
+        age_preds = age_net.forward()
+        age = AGE_LIST[age_preds[0].argmax()]
+
+        print(f"Assumed gender: {gender_preds}\n Assumed age: {age_preds}")
+
+        label = "{},{}".format(gender, age)
+        text_size = cv.getTextSize(label, cv.FONT_HERSHEY_TRIPLEX, 0.5, 1)[0]
+        text_x = x + (w - text_size[0]) / 2
+        cv.putText(frame, label, (int(text_x), y - 10), cv.FONT_HERSHEY_TRIPLEX, 0.5, (0, 255, 0), 1, cv.LINE_AA)
+        return faces
 
 
 def load_caffe_models(args) -> tuple:
+
+    # face_proto = "opencv/samples/dnn/face_detector/opencv_face_detector.pbtxt"
+    # face_model = "opencv_face_detector_uint8.pb"
+
     age_proto = "proto_values/deploy_age.prototxt"
     age_model = "proto_values/age_net.caffemodel"
 
     gender_proto = "proto_values/deploy_gender.prototxt"
     gender_model = "proto_values/gender_net.caffemodel"
 
-    face_proto = "opencv/samples/dnn/face_detector/opencv_face_detector.pbtxt"
-    face_model = "opencv_face_detector_uint8.pb"
-
-    face_net = cv.dnn.readNet(face_model, face_proto)
+    # face_net = cv.dnn.readNet(face_model, face_proto)
     age_net = cv.dnn.readNet(age_model, age_proto)
     gender_net = cv.dnn.readNet(gender_model, gender_proto)
 
@@ -54,7 +71,7 @@ def load_caffe_models(args) -> tuple:
 
         gender_net.setPreferableBackend(cv.dnn.DNN_TARGET_CPU)
 
-        face_net.setPreferableBackend(cv.dnn.DNN_TARGET_CPU)
+        # face_net.setPreferableBackend(cv.dnn.DNN_TARGET_CPU)
 
         print("Using CPU device")
     elif args.device == "gpu":
@@ -64,8 +81,8 @@ def load_caffe_models(args) -> tuple:
         gender_net.setPreferableBackend(cv.dnn.DNN_BACKEND_CUDA)
         gender_net.setPreferableTarget(cv.dnn.DNN_TARGET_CUDA)
 
-        gender_net.setPreferableBackend(cv.dnn.DNN_BACKEND_CUDA)
-        gender_net.setPreferableTarget(cv.dnn.DNN_TARGET_CUDA)
+        # face_net.setPreferableBackend(cv.dnn.DNN_BACKEND_CUDA)
+        # face_net.setPreferableTarget(cv.dnn.DNN_TARGET_CUDA)
         print("Using GPU device")
 
     # If device is not valid, default to CPU
@@ -74,14 +91,14 @@ def load_caffe_models(args) -> tuple:
         
         age_net.setPreferableBackend(cv.dnn.DNN_TARGET_CPU)
         gender_net.setPreferableBackend(cv.dnn.DNN_TARGET_CPU)
-        face_net.setPreferableBackend(cv.dnn.DNN_TARGET_CPU)
+        # face_net.setPreferableBackend(cv.dnn.DNN_TARGET_CPU)
 
         print("Using CPU device")
 
-    return age_net, gender_net, face_net
+    return age_net, gender_net
 
 
-def video_detector(age_net, gender_net, face_net, args) -> None:
+def video_detector(age_net, gender_net) -> None:
     # Open a video file or an image file or a camera stream
     cap = cv.VideoCapture(args.input if args.input else 0)
     padding = 20
@@ -94,43 +111,20 @@ def video_detector(age_net, gender_net, face_net, args) -> None:
             continue
         has_frame, frame = cap.read()
         if not has_frame:
-            cv.waitKey()
+            print("No video feed available, exiting...")
+            cv.waitKey(5000)
             break
 
-        frame_face, bboxes = get_face_box(face_net, frame)
-        if not bboxes:
-            print("No face Detected, Checking next frame")
-            continue
-
-        for bbox in bboxes:
-            # print(bbox)
-            face = frame[max(0, bbox[1] - padding):min(bbox[3] + padding, frame.shape[0] - 1),
-                   max(0, bbox[0] - padding):min(bbox[2] + padding, frame.shape[1] - 1)]
-
-            blob = cv.dnn.blobFromImage(face, 1.0, (227, 227), MODEL_MEAN_VALUES, swapRB=False)
-            gender_net.setInput(blob)
-            gender_preds = gender_net.forward()
-            gender = GENDER_LIST[gender_preds[0].argmax()]
-            print("Gender Output : {}".format(gender_preds))
-            print("Gender : {}, conf = {:.3f}".format(gender, gender_preds[0].max()))
-
-            age_net.setInput(blob)
-            age_preds = age_net.forward()
-            age = AGE_LIST[age_preds[0].argmax()]
-            print("Age Output : {}".format(age_preds))
-            print("Age : {}, conf = {:.3f}".format(age, age_preds[0].max()))
-
-            label = "{},{}".format(gender, age)
-            cv.putText(frame_face, label, (bbox[0], bbox[1] - 10), cv.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2,
-                       cv.LINE_AA)
-            cv.imshow("Age Gender Demo", frame_face)
-            # cv.imwrite("age-gender-out-{}".format(args.input),frameFace)
+        # Get the face box
+        classify_image(gender_net, age_net, frame)
+        # Display the resulting frame
+        cv.imshow('frame', frame)
+        t1 = time.time()
         print("time : {:.3f}".format(time.time() - t1))
 
 
 def main(args) -> None:
-
-    video_detector(*load_caffe_models(args), args)
+    video_detector(*load_caffe_models(args))
 
 if __name__ == "__main__":
     # Parse bash arguments
