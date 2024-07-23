@@ -6,6 +6,7 @@ venv/
 ### build ###
 opencv/
 make_opencv/
+CV-camera-finder/
 
 ### Don't you push images to git ! ###
 *.jpg

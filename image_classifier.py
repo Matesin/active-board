@@ -11,6 +11,21 @@ GENDER_LIST = ['Male', 'Female']
 # Camera info
 CAMERA_RESOLUTION = 720
 
+# Load the face classifier
+face_classifier = cv.CascadeClassifier(
+        'proto_values/haarcascade_frontalface_default.xml')  # Load the face classifier, SPECIFY PATH
+
+# Load the neural networks
+age_proto = "proto_values/deploy_age.prototxt"
+age_model = "proto_values/age_net.caffemodel"
+
+gender_proto = "proto_values/deploy_gender.prototxt"
+gender_model = "proto_values/gender_net.caffemodel"
+
+# face_net = cv.dnn.readNet(face_model, face_proto)
+age_net = cv.dnn.readNet(age_model, age_proto)
+gender_net = cv.dnn.readNet(gender_model, gender_proto)
+
 
 # ----------------------CLASS----------------------
 class Person:
@@ -28,75 +43,73 @@ class Person:
 
 
 # ----------------------FUNCTION----------------------
-def classify_image(gender_net, age_net, frame_in):
+def analyze_face(x, y, w, h, frame) -> Person:
+    face = frame[y:y + h, x:x + w].copy()
+    log.info(face)
+
+    blob = cv.dnn.blobFromImage(face, 1.0, (244, 244), MODEL_MEAN_VALUES, swapRB=True)
+
+    # Predict gender
+    gender_net.setInput(blob)
+    gender_preds = gender_net.forward()
+
+    log.info(f"Gender preds size: {gender_preds.size}")
+    if gender_preds.size > 0 and gender_preds[0].argmax() < len(GENDER_LIST):
+        if gender_preds[0].max() > CONF_THRESHOLD:
+            gender = GENDER_LIST[gender_preds[0].argmax()]
+        else:
+            gender = "Unknown"
+    else:
+        gender = "Unknown"
+
+    log.info("Gender Output : {}".format(gender_preds))
+    log.info("Gender : {}, conf = {:.3f}".format(gender, gender_preds[0].max()))
+
+    # Predict age
+    age_net.setInput(blob)
+    age_preds = age_net.forward()
+    age = AGE_LIST[age_preds[0].argmax()]
+
+    # TODO: Improve proximity assessment
+    proximity = w / CAMERA_RESOLUTION
+    return Person(age, gender, proximity, (x, y))
+
+
+# ----------------------FUNCTION----------------------
+def classify_image(frame_in, demo):
     """
     Classifies faces in a given frame
-    :param gender_net:
-    :param age_net:
+    :param demo: Boolean value, if True, the frame will be annotated
     :param frame_in:
     :return: List of People objects, frame with faces outlined and details annotated
     """
+    people = []
 
+    # Flip the frame
     frame = cv.flip(frame_in, 1)
 
-    face_classifier = cv.CascadeClassifier(
-        'opencv/data/haarcascades/haarcascade_frontalface_default.xml')  # Load the face classifier, SPECIFY PATH
     faces = face_classifier.detectMultiScale(frame, 1.3, 5, minSize=(30, 30))
 
     if len(faces) == 0:
         return None, frame
-
     log.info(f"Faces detected: {len(faces)}")
 
-    people = []
-
     for (x, y, w, h) in faces:
-
-        # log.info(f"Face {faces.index((x, y, w, h))} x: {x}, y: {y}, w: {w}, h: {h}")
-        cv.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        face = frame[y:y + h, x:x + w].copy()
-        log.info(face)
-
-        blob = cv.dnn.blobFromImage(face, 1.0, (244, 244), MODEL_MEAN_VALUES, swapRB=True)
-        # log.info(blob)
-
-        # Predict gender
-        gender_net.setInput(blob)
-        gender_preds = gender_net.forward()
-        log.info(f"Gender preds size: {gender_preds.size}")
-        if gender_preds.size > 0 and gender_preds[0].argmax() < len(GENDER_LIST):
-            if gender_preds[0].max() > CONF_THRESHOLD:
-                gender = GENDER_LIST[gender_preds[0].argmax()]
-            else:
-                gender = "Unknown"
-        else:
-            gender = "Unknown"
-
-        log.info("Gender Output : {}".format(gender_preds))
-        log.info("Gender : {}, conf = {:.3f}".format(gender, gender_preds[0].max()))
-
-        # Predict age
-        age_net.setInput(blob)
-        age_preds = age_net.forward()
-        age = AGE_LIST[age_preds[0].argmax()]
-
-        # TODO: Improve proximity assessment
-        proximity = w / CAMERA_RESOLUTION
-        people.append(Person(age, gender, proximity, (x, y)))  # Create a person object and append it to the list
-
-        log.info(f"Assumed gender: {gender_preds}\n Assumed age: {age_preds}")
-
-        label = "{},{}".format(gender, age)
-        text_size = cv.getTextSize(label, cv.FONT_HERSHEY_TRIPLEX, 0.5, 1)[0]
-        text_x = x + (w - text_size[0]) / 2
-        cv.putText(frame,
-                   label,
-                   (int(text_x), y - 10),
-                   cv.FONT_HERSHEY_TRIPLEX,
-                   0.5,
-                   (0, 255, 0),
-                   1,
-                   cv.LINE_AA)
+        person = analyze_face(x, y, w, h, frame)
+        people.append(person)  # Create a person object and append it to the list
+        if demo:
+            cv.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+            label = "{},{}".format(person.gender, person.age)
+            text_size = cv.getTextSize(label, cv.FONT_HERSHEY_TRIPLEX, 0.5, 1)[0]
+            text_x = x + (w - text_size[0]) / 2
+            cv.putText(frame,
+                       label,
+                       (int(text_x), y - 10),
+                       cv.FONT_HERSHEY_TRIPLEX,
+                       0.5,
+                       (0, 255, 0),
+                       1,
+                       cv.LINE_AA)
 
     return people, frame
 
@@ -108,19 +121,6 @@ def load_caffe_models(args) -> tuple:
     :param args: bash args
     :return: calibrated networks for age and gender assessment
     """
-
-    # face_proto = "opencv/samples/dnn/face_detector/opencv_face_detector.pbtxt"
-    # face_model = "opencv_face_detector_uint8.pb"
-
-    age_proto = "proto_values/deploy_age.prototxt"
-    age_model = "proto_values/age_net.caffemodel"
-
-    gender_proto = "proto_values/deploy_gender.prototxt"
-    gender_model = "proto_values/gender_net.caffemodel"
-
-    # face_net = cv.dnn.readNet(face_model, face_proto)
-    age_net = cv.dnn.readNet(age_model, age_proto)
-    gender_net = cv.dnn.readNet(gender_model, gender_proto)
 
     # ----------------------SETTINGS----------------------
     # Set device

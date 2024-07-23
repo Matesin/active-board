@@ -1,3 +1,6 @@
+import platform
+
+
 import cv2
 import time
 import subprocess
@@ -6,7 +9,7 @@ import argparse
 import logging as log
 
 # ----------------------MACROS----------------------
-FPS = 10
+FPS = 5
 
 
 # ----------------------FUNCTION----------------------
@@ -38,7 +41,7 @@ def capture_video(camera_id: int) -> None:
 
 
 # ----------------------FUNCTION----------------------
-def capture_video_classify(camera_id: int, age_net, gender_net) -> None:
+def capture_video_classify(camera_id: int, demo) -> None:
     """
     Captures live video feed and classifies faces within its frame
     :param camera_id: Chosen input camera
@@ -61,7 +64,7 @@ def capture_video_classify(camera_id: int, age_net, gender_net) -> None:
                 break
             t1 = t2
             # Display the resulting frame
-        people, frame_out = ic.classify_image(gender_net, age_net, frame)  # Classify the frame
+        people, frame_out = ic.classify_image(frame, demo)  # Classify the frame
         cv2.imshow(f"Camera {camera_id}", frame_out)
     picked_camera.release()
     cv2.destroyAllWindows()
@@ -69,34 +72,28 @@ def capture_video_classify(camera_id: int, age_net, gender_net) -> None:
 
 
 # ----------------------FUNCTION----------------------
-def get_camera_dict() -> dict:
+def get_camera_list() -> list:
     """
     Scans the computer for all available video input devices
     :return: Dictionary of available cameras and their respective indices
     """
-    # Get all camera names
-    # TODO: add Windows compatibility
-    index = 0
-    cameras = {}
-    while True:
-        try:
-            cap = cv2.VideoCapture(index, cv2.CAP_ANY)
-            if not cap.read()[0]:
-                break
-            else:
-                command = 'system_profiler SPCameraDataType | awk \'/Model ID/{log substr($0, index($0,$6))}\''
-                camera_name = subprocess.run(command, shell=True, capture_output=True, text=True).stdout.strip()
-                camera_names = camera_name.split('\n')
-                if index < len(camera_names):
-                    cameras[index] = camera_names[0]
-                    # log(f"Camera {index}: {cameras[index]}")
-                else:
-                    break
-            cap.release()
-        except Exception as e:
-            log.error(e) # Jebat tuhle exception, zkousim mutnout OpenCV errors, zkus najit jiny reseni pls
-            break
-        index += 1
+    cameras = []
+    if platform.system().__eq__('Linux') or platform.system().__eq__('Darwin'):
+        command = 'system_profiler SPCameraDataType | grep "^    [^ ]" | sed "s/    //" | sed "s/://"'
+        cameras = subprocess.run(command, shell=True, capture_output=True, text=True).stdout.strip().split('\n')
+    elif platform.system().__eq__('Windows'):
+        i = 10
+        j = 0
+        while i > 0:
+            cap = cv2.VideoCapture(j)
+            if cap.read()[0]:
+                cameras.append(j)
+                cap.release()
+            j += 1
+            i -= 1
+    else:
+        log.error("Unsupported OS, ending program.")
+        exit(-1)
     return cameras
 
 # ----------------------MAIN----------------------
@@ -117,18 +114,26 @@ if __name__ == "__main__":
 
     # Set FPS
     FPS = args.fps if args.fps in args else FPS
-    cameras = get_camera_dict()
-    if len(cameras) == 0:
+    camera_list = get_camera_list()
+    if len(camera_list) == 0:
         log.error("There are no cameras available, ending program")
         exit(-1)
     print(f"The following cameras are available:")
-    for index, camera_name in cameras.items():
+    index = 1
+    for camera_name in camera_list:
         print(f"Camera {index}: {camera_name}")
+        index += 1
     camera_index = input("Input the camera index: ")
-    while not camera_index.isdigit() or int(camera_index) not in cameras.keys():
+    while not camera_index.isdigit() or int(camera_index) - 1 > len(camera_list):
         camera_index = input("Input a valid camera index: ")
+    demo = input("Do you want to run the demo? (y/n): ")
+    while demo.lower() != 'y' and demo.lower() != 'n':
+        demo = input("Input a valid answer: ")
+    if demo.lower() == 'y':
+        demo = True
+    else: demo = False
     print(f"Opening camera {camera_index}...")
     age_net, gender_net = ic.load_caffe_models(args)
     # capture_video(int(camera_index))
-    capture_video_classify(int(camera_index), age_net, gender_net)
+    capture_video_classify(int(camera_index), demo)
     log.info("Ending program, jebuto.")
