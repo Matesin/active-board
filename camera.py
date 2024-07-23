@@ -45,8 +45,7 @@ def capture_video_classify(camera_id: int, demo) -> None:
     """
     Captures live video feed and classifies faces within its frame
     :param camera_id: Chosen input camera
-    :param age_net: Network to determine age from a given image
-    :param gender_net: Network to determine gender from a given image
+    :param demo: Boolean value, if True, the frame will be annotated
     :return: None
     """
     picked_camera = cv2.VideoCapture(camera_id)
