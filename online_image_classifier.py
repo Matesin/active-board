@@ -1,7 +1,6 @@
 # visual recognition API key: AALtVzXYrmnUq4Rma4qERYrbFLBXQm-8yefjM--FPAVa
 
 import cv2 as cv
-from picamera import PiCamera
 from io import BytesIO
 import requests as req
 import numpy as np
@@ -12,7 +11,7 @@ from datetime import datetime
 def capture_image():
     # Create the in-memory stream
     stream = BytesIO()
-    camera = cv2.VideoCapture(0)
+    camera = cv.VideoCapture(0)
     frame = camera.read()
     # "Rewind" the stream to the beginning so we can read its content
     stream.seek(0)
@@ -26,7 +25,7 @@ if __name__ == "__main__":
     username = "apikey"
     password = "AALtVzXYrmnUq4Rma4qERYrbFLBXQm-8yefjM--FPAVa"
     image_stream = capture_image()
-    files = {'file':('camera', image_stream.getvalue(), 'image/jpg')}
+    files = {'file': ('camera', image_stream.getvalue(), 'image/jpg')}
     resp = req.post(url, files=files, auth=(username, password))
     print("code: {}\n\nresponse:\n{}".format(resp.status_code, json.dumps(resp.json(), indent=4)))
     result = resp.json()
@@ -35,7 +34,6 @@ if __name__ == "__main__":
     img = decoded_image if decoded_image is not None else 'default.jpg'
 
     for face in result['images'][0]['faces']:
-
         top_left = (face['face_location']['left'], face['face_location']['top'])
         bottom_right = (top_left[0] + face['face_location']['width'], top_left[1] + face['face_location']['height'])
         print(f"top_left {i + 1}: {top_left}, bottom_right: {bottom_right}")
@@ -44,18 +42,18 @@ if __name__ == "__main__":
 
         font = cv.FONT_HERSHEY_SIMPLEX
         bottom_left = top_left
-        bottomLeftCornerOfText = (bottom_left[0]-100, bottom_left[1]-30)
+        bottomLeftCornerOfText = (bottom_left[0] - 100, bottom_left[1] - 30)
         fontScale = 0.5
-        fontColor = (0,0,0)
+        fontColor = (0, 0, 0)
         lineType = 1
         gender = face['gender']['gender_label']
         age_min = face['age']['min']
         age_max = face['age']['max']
-        cv.putText(img,'gender: {} age: {}-{}'.format(pohlavi, vek_minimalni, vek_maximalni),
-            bottomLeftCornerOfText,
-            font,
-            fontScale,
-            fontColor,
-            lineType)
+        cv.putText(img, 'gender: {} age: {}-{}'.format(gender, age_min, age_max),
+                   bottomLeftCornerOfText,
+                   font,
+                   fontScale,
+                   fontColor,
+                   lineType)
 
 cv.imwrite('image-obdelnik-{}.jpg'.format(datetime.now().strftime("%Y %H:%M:%S")), img)
