@@ -95,6 +95,7 @@ def get_camera_list() -> list:
         exit(-1)
     return cameras
 
+
 # ----------------------MAIN----------------------
 if __name__ == "__main__":
 

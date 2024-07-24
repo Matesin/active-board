@@ -54,6 +54,7 @@ def analyze_face(x, y, w, h, frame) -> Person:
     gender_preds = gender_net.forward()
 
     log.info(f"Gender preds size: {gender_preds.size}")
+
     if gender_preds.size > 0 and gender_preds[0].argmax() < len(GENDER_LIST):
         if gender_preds[0].max() > CONF_THRESHOLD:
             gender = GENDER_LIST[gender_preds[0].argmax()]
