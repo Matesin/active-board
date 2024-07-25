@@ -13,7 +13,7 @@ CAMERA_RESOLUTION = 720
 
 # Load the face classifier
 face_classifier = cv.CascadeClassifier(
-        'proto_values/haarcascade_frontalface_default.xml')  # Load the face classifier, SPECIFY PATH
+    '../proto_values/haarcascade_frontalface_default.xml')  # Load the face classifier, SPECIFY PATH
 
 # Load the neural networks
 age_proto = "proto_values/deploy_age.prototxt"

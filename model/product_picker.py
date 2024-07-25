@@ -15,7 +15,7 @@ class ProductProperties:
         self.image = image
 
     def __str__(self):
-        return (f"Product falls under category: {self.category}, "
+        return (f"Product falls under category {self.category}, "
                 f"is supposed to be used by the gender {self.gender}, "
                 f"of age {self.age}")
 
@@ -81,11 +81,11 @@ def serialize_products(products: list, filename: str) -> None:
     """
     products_data = []
     for product in products:
-        product_data = {"name": product.name,
-                        "properties":
-                            {"category": product.properties.category,
-                             "customer_disclaimer": product.properties.disclaimer,
-                             "image": product.properties.image}}
+        products_data = {"name": product.name,
+                         "properties":
+                             {"category": product.properties.category,
+                              "customer_disclaimer": product.properties.disclaimer,
+                              "image": product.properties.image}}
     with open(filename, "w") as file:
         try:  # Try to serialize the products
             json.dump(products_data, file)
@@ -96,8 +96,8 @@ def serialize_products(products: list, filename: str) -> None:
 # test
 if __name__ == "__main__":
 
-    products = deserialize_products("products_sample.json")
+    products = deserialize_products("../tests/test_files/products_sample.json")
     evaluated_products = pick_products(3, products)
     for item in evaluated_products:
         print(item)
-    serialize_products(evaluated_products, "picked_products_sample.json")
+    serialize_products(evaluated_products, "../tests/test_files/picked_products_sample.json")
