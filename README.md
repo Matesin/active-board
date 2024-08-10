@@ -3,11 +3,23 @@
 ## Description
 This project is an implementation of computer vision and neural networks 
 which aims to provide a better experience for potential customers of stores trying to find their product. 
+
 ### Technologies used
 The billboard device uses OpenCV and AsureAI to detect and analyse people standing in front of it, it then displays the most relevant products to the customer.
+
 ## Usage
 - [ ] If you use Windows, be sure to have Python installed.
-- [ ] [Download the python CV2 library](https://pypi.org/project/opencv-python/) to the working directory in order to use the code.
+  - [ ] [Download the python CV2 library](https://pypi.org/project/opencv-python/) to the working directory in order to use the code.
+    - [ ] Either use the provided link to be able to build the library by yourself or run the following command in the terminal:
+    ``` bash
+    pip install opencv-python
+      ```
+    or:
+      ``` bash
+    brew install opencv
+      ```
+    
+
 - [ ] Run the code in the working directory.
 ``` bash
 cd working_directory
