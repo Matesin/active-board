@@ -14,7 +14,7 @@ class Person:
         self.coords = coords
 
     def __str__(self):
-        return f'{self.gender} of age: {self.age} detected!'
+        return f'{self.gender} of age: {self.age}'
 
     def __repr__(self):
         return f'Person({self.gender}, {self.age}, {self.proximity}, {self.coords})'
