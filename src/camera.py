@@ -1,16 +1,16 @@
+# ----------------------IMPORTS----------------------
 import platform
-
 
 import cv2
 import time
 import subprocess
-import image_classifier as ic
-import argparse
+from controller import image_classifier as ic
+from model import customer_picker as cp
 import logging as log
 
 # ----------------------MACROS----------------------
 FPS = 5
-
+LIST_FACES = False
 
 # ----------------------FUNCTION----------------------
 def capture_video(camera_id: int) -> None:
@@ -34,7 +34,7 @@ def capture_video(camera_id: int) -> None:
                 break
             t1 = t2
             # Display the resulting frame
-        cv2.imshow(f"Camera {camera_id}", frame)
+            cv2.imshow(f"Camera {camera_id}", frame)
     picked_camera.release()
     cv2.destroyAllWindows()
     log.info("Camera released and windows destroyed.")
@@ -45,12 +45,13 @@ def capture_video_classify(camera_id: int, demo) -> None:
     """
     Captures live video feed and classifies faces within its frame
     :param camera_id: Chosen input camera
-    :param age_net: Network to determine age from a given image
-    :param gender_net: Network to determine gender from a given image
+    :param demo: Boolean value, if True, the frame will be annotated
     :return: None
     """
     picked_camera = cv2.VideoCapture(camera_id)
     t1 = time.time()
+    people = []
+    log.info("Starting the camera, press 'q' to quit.")
     while True:
         t2 = time.time()
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -65,6 +66,17 @@ def capture_video_classify(camera_id: int, demo) -> None:
             t1 = t2
             # Display the resulting frame
         people, frame_out = ic.classify_image(frame, demo)  # Classify the frame
+        if LIST_FACES:
+            for person in people:
+                log.info(f"Person: {person}")
+
+        # Evaluate faces in the frame
+        picked_customer = cp.evaluate_faces(people)  # Evaluate the customers
+        if demo:
+            if picked_customer is not None:
+                log.info(f"Customer picked: {str(picked_customer)}")
+            else:
+                log.info("No faces detected.")
         cv2.imshow(f"Camera {camera_id}", frame_out)
     picked_camera.release()
     cv2.destroyAllWindows()
@@ -96,44 +108,8 @@ def get_camera_list() -> list:
         exit(-1)
     return cameras
 
-# ----------------------MAIN----------------------
-if __name__ == "__main__":
 
-    # ----------------------BASH ARGS----------------------
-    parser = argparse.ArgumentParser(description='Use this script to run age and gender recognition using OpenCV.')
+# ----------------------FUNCTION----------------------
+def init_nets(args) -> None:
+    ic.age_net, ic.gender_net = ic.load_caffe_models(args)
 
-    parser.add_argument('--input',
-                        help='Path to input image or video file. Skip this argument to capture frames from a camera.')
-
-    parser.add_argument("--device", default="cpu", help="Device to inference on")
-
-    parser.add_argument('--fps', type=int, default=10, help='Frames per second that the camera will capture')
-
-    # Parse args
-    args = parser.parse_args()
-
-    # Set FPS
-    FPS = args.fps if args.fps in args else FPS
-    camera_list = get_camera_list()
-    if len(camera_list) == 0:
-        log.error("There are no cameras available, ending program")
-        exit(-1)
-    print(f"The following cameras are available:")
-    index = 1
-    for camera_name in camera_list:
-        print(f"Camera {index}: {camera_name}")
-        index += 1
-    camera_index = input("Input the camera index: ")
-    while not camera_index.isdigit() or int(camera_index) - 1 > len(camera_list):
-        camera_index = input("Input a valid camera index: ")
-    demo = input("Do you want to run the demo? (y/n): ")
-    while demo.lower() != 'y' and demo.lower() != 'n':
-        demo = input("Input a valid answer: ")
-    if demo.lower() == 'y':
-        demo = True
-    else: demo = False
-    print(f"Opening camera {camera_index}...")
-    age_net, gender_net = ic.load_caffe_models(args)
-    # capture_video(int(camera_index))
-    capture_video_classify(int(camera_index), demo)
-    log.info("Ending program, jebuto.")
