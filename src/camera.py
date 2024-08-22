@@ -1,15 +1,16 @@
+# ----------------------IMPORTS----------------------
 import platform
-
 
 import cv2
 import time
 import subprocess
-from . import image_classifier as ic
+from controller import image_classifier as ic
+from model import customer_picker as cp
 import logging as log
 
 # ----------------------MACROS----------------------
 FPS = 5
-
+LIST_FACES = False
 
 # ----------------------FUNCTION----------------------
 def capture_video(camera_id: int) -> None:
@@ -33,8 +34,7 @@ def capture_video(camera_id: int) -> None:
                 break
             t1 = t2
             # Display the resulting frame
-        # TODO: adjust indentation?
-        cv2.imshow(f"Camera {camera_id}", frame)
+            cv2.imshow(f"Camera {camera_id}", frame)
     picked_camera.release()
     cv2.destroyAllWindows()
     log.info("Camera released and windows destroyed.")
@@ -50,6 +50,8 @@ def capture_video_classify(camera_id: int, demo) -> None:
     """
     picked_camera = cv2.VideoCapture(camera_id)
     t1 = time.time()
+    people = []
+    log.info("Starting the camera, press 'q' to quit.")
     while True:
         t2 = time.time()
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -64,6 +66,17 @@ def capture_video_classify(camera_id: int, demo) -> None:
             t1 = t2
             # Display the resulting frame
         people, frame_out = ic.classify_image(frame, demo)  # Classify the frame
+        if LIST_FACES:
+            for person in people:
+                log.info(f"Person: {person}")
+
+        # Evaluate faces in the frame
+        picked_customer = cp.evaluate_faces(people)  # Evaluate the customers
+        if demo:
+            if picked_customer is not None:
+                log.info(f"Customer picked: {str(picked_customer)}")
+            else:
+                log.info("No faces detected.")
         cv2.imshow(f"Camera {camera_id}", frame_out)
     picked_camera.release()
     cv2.destroyAllWindows()

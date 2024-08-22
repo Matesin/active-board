@@ -3,6 +3,8 @@ import cv2 as cv
 import logging as log
 from pathlib import Path
 
+from .person import Person
+
 # CV heuristics TODO: improve model functionality
 CONF_THRESHOLD = 0.7
 MODEL_MEAN_VALUES = (78.4263377603, 87.7689143744, 114.895847746)
@@ -29,29 +31,10 @@ age_net = cv.dnn.readNet(age_model, age_proto)
 gender_net = cv.dnn.readNet(gender_model, gender_proto)
 
 
-# ----------------------CLASS----------------------
-class Person:
-
-    def __init__(self, age, gender, proximity: float, coords: tuple):
-        """
-        Person class
-        :param age: Age of the person
-        :param gender: Gender of the person
-        :param proximity: Proximity to the camera
-        """
-        self.age = age
-        self.gender = gender
-        self.proximity = proximity
-        self.coords = coords
-
-    def __str__(self):
-        return f"Person: {self.age}"
-
-
 # ----------------------FUNCTION----------------------
 def analyze_face(x, y, w, h, frame) -> Person:
     face = frame[y:y + h, x:x + w].copy()
-    log.info(face)
+    # log.info(face)
 
     blob = cv.dnn.blobFromImage(face, 1.0, (244, 244), MODEL_MEAN_VALUES, swapRB=True)
 
@@ -59,7 +42,7 @@ def analyze_face(x, y, w, h, frame) -> Person:
     gender_net.setInput(blob)
     gender_preds = gender_net.forward()
 
-    log.info(f"Gender preds size: {gender_preds.size}")
+    # log.info(f"Gender preds size: {gender_preds.size}")
 
     if gender_preds.size > 0 and gender_preds[0].argmax() < len(GENDER_LIST):
         if gender_preds[0].max() > CONF_THRESHOLD:
@@ -69,8 +52,8 @@ def analyze_face(x, y, w, h, frame) -> Person:
     else:
         gender = "Unknown"
 
-    log.info("Gender Output : {}".format(gender_preds))
-    log.info("Gender : {}, conf = {:.3f}".format(gender, gender_preds[0].max()))
+    # log.info("Gender Output : {}".format(gender_preds))
+    # log.info("Gender : {}, conf = {:.3f}".format(gender, gender_preds[0].max()))
 
     # Predict age
     age_net.setInput(blob)
@@ -99,7 +82,7 @@ def classify_image(frame_in, demo):
 
     if len(faces) == 0:
         return None, frame
-    log.info(f"Faces detected: {len(faces)}")
+    # log.info(f"Faces detected: {len(faces)}")
 
     for (x, y, w, h) in faces:
         person = analyze_face(x, y, w, h, frame)
