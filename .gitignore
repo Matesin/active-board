@@ -8,11 +8,11 @@ opencv/
 make_opencv/
 CV-camera-finder/
 
-### Don't you push images to git ! ###
-*.jpg
-*.png
-*.jpeg
-*.gif
+### Don't you push images to git ! ### Well actually you can for testing purposes
+#*.jpg
+#*.png
+#*.jpeg
+#*.gif
 
 ### Json files ###
 *.json
