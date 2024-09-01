@@ -1,5 +1,6 @@
 import json
-from product import ProductProperties, Product
+from .product import ProductProperties, Product
+import logging as log
 
 
 def deserialize_products(filename: str) -> list:
@@ -20,10 +21,11 @@ def deserialize_products(filename: str) -> list:
                                                    image=product_data["properties"]["image"])
             product = Product(name=product_data["name"], properties=properties)
             products.append(product)
+    log.info(f"Products deserialized from file {filename}.")
     return products
 
 
-def pick_products(products_threshold: int, products) -> list:
+def pick_products(products_threshold: int, products: list) -> list:
     """
     Picks products based on given parameters
     :param products_threshold: Number of products to pick

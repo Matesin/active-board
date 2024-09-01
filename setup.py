@@ -21,7 +21,7 @@ setup(
     },
     author='Matyas Martan',
     author_email='maty.martan@gmail.com',
-    description='A project for making billboards',
+    description='A project for billboard creatives using AI',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     url='https://gitlab.fel.cvut.cz/martama1/manuboard.git',

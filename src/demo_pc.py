@@ -17,6 +17,30 @@ def get_bool_response(user_input: str) -> bool:
     return output
 
 
+def get_camera_index() -> int:
+    camera_list = get_camera_list()
+    if len(camera_list) == 0:
+        log.error("There are no cameras available, ending program")
+        exit(-1)
+
+    # List all available cameras
+    print(f"The following cameras are available:")
+    index = 1
+    for camera_name in camera_list:
+        print(f"Camera {index}: {camera_name}")
+        index += 1
+    camera_index = input("Input the camera index: ")
+    while not camera_index.isdigit() or int(camera_index) - 1 > len(camera_list):
+        camera_index = input("Input a valid camera index: ")
+
+    # Return a valid camera index
+    if len(camera_list) == 1:
+        camera_index = int(camera_index) - 1
+    else :
+        camera_index = int(camera_index)
+    return camera_index
+
+
 def main() -> None:
     # Demo program for the product
     # Made for macOS, Windows and Linux
@@ -37,29 +61,21 @@ def main() -> None:
     camera.FPS = args.fps if args.fps in args else camera.FPS
     camera.LIST_FACES = args.list_faces if args.list_faces in args else camera.LIST_FACES
 
-    camera_list = get_camera_list()
-    if len(camera_list) == 0:
-        log.error("There are no cameras available, ending program")
-        exit(-1)
+    # Get camera index
+    camera_index = get_camera_index()
 
-    # List all available cameras
-    print(f"The following cameras are available:")
-    index = 1
-    for camera_name in camera_list:
-        print(f"Camera {index}: {camera_name}")
-        index += 1
-    camera_index = input("Input the camera index: ")
-    while not camera_index.isdigit() or int(camera_index) - 1 > len(camera_list):
-        camera_index = input("Input a valid camera index: ")
-
-    # Ask user if they want to run the demo
+    # Ask for demo
     demo = input("Do you want to run the demo? (y/n): ")
     demo = get_bool_response(demo)
 
     log.info(f"Opening camera {camera_index}...")
 
+    # Initialize the nets
     init_nets(args)
-    capture_video_classify(int(camera_index), demo)
+
+    picked_products = capture_video_classify(int(camera_index), demo)
+    for product in picked_products:
+        log.info(f"Product picked: {product}")
     log.info("Ending program, jebuto.")
 
 
