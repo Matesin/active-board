@@ -1,4 +1,4 @@
-# ManuBoard
+# Active Board
 
 ## Description
 This project is an implementation of computer vision and neural networks 
